@@ -5,29 +5,29 @@ Creates a unique identifier used to reference a replication object. The same nam
 
 ---
 
-### `Replication.New(config: { ID: ID, Mutable: boolean, Data: table }) -> void`
+### `Replication.New(config: { ID: string, Mutable: boolean, Data: table }) -> void`
 Creates a new replication object on the server and replicates it to all clients.
 
 | Field | Type | Description |
 |---|---|---|
-| `ID` | `ID` | The identifier returned by `Replication.ID()` |
+| `ID` | `string` | The identifier returned by `Replication.ID()` |
 | `Mutable` | `boolean` | Whether `Replication:Set()` can be called on this object |
 | `Data` | `table` | The initial data to replicate. The passed table reference is used directly |
 
 ---
 
-### `Replication:Set(ID: ID, key: any, value: any) -> void`
+### `Replication:Set(ID: string, key: any, value: any) -> void`
 *(Server-only)* Updates a value inside the replication object and replicates the change to all clients. Requires `Mutable = true`.
 
 ---
 
 
-### `Replication.getData(ID: ID) -> table`
+### `Replication.getData(ID: string) -> table`
 Returns a snapshot of the current replicated data for the given ID.
 
 ---
 
-### `Replication:onChanged(ID: ID, path: string, callback: (new_value: any, old_value: any?) -> void) -> Connection`
+### `Replication:onChanged(ID: string, path: string, callback: (new_value: any, old_value: any?) -> void) -> Connection`
 Registers a listener that fires whenever the value at `path` changes. Supports dot-notation for nested tables (e.g. `"Stats.XP"`).
 
 **Callback parameters:**
