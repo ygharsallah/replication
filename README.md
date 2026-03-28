@@ -16,8 +16,8 @@ Creates a new replication object on the server and replicates it to all clients.
 
 ---
 
-### `Replication:Set(ID: string, key: any, value: any) -> void`
-*(Server-only)* Updates a value inside the replication object and replicates the change to all clients. Requires `Mutable = true`.
+### `Replication:Set(ID: string, path: string, value: any) -> void`
+*(Server-only)* Updates a value inside the replication object at the provided dot-notation `path` (e.g. `"Money"`, `"Stats.XP"`) and replicates the change to all clients. Requires `Mutable = true`.
 
 ---
 
@@ -79,14 +79,14 @@ Replication.New({
 -- Every second, increment Money by 100 and XP by 10
 task.spawn(function()
     while true do
-        Replication:Set(ID, Data.Money, Data.Money + 100)
-        Replication:Set(ID, Data.Stats.XP, Data.Stats.XP + 10)
+        Replication:Set(ID, "Money", Data.Money + 100)
+        Replication:Set(ID, "Stats.XP", Data.Stats.XP + 10)
         task.wait(1)
     end
 end)
 
 -- Immediately set Invincible to true on startup
-Replication:Set(ID, Data.Invincible, true)
+Replication:Set(ID, "Invincible", true)
 ```
 
 ### Client-side
