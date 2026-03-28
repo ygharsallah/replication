@@ -1,0 +1,10 @@
+[package]
+name = "ghars/replication"
+description = "does something!"
+license = "MIT"
+version = "0.0.1"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+exclude = [rokit.toml]
+
+[dependencies]
