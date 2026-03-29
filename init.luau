@@ -254,10 +254,10 @@ function Replication:Set(id: string, path: string, value: any)
 	ensureRemote():FireAllClients("set", id, path, newValue)
 end
 
-function Replication.getData(id: string)
-	assert(type(id) == "string" and id ~= "", "Replication.getData requires a non-empty ID.")
+function Replication:getData(id: string)
+	assert(type(id) == "string" and id ~= "", "Replication:getData requires a non-empty ID.")
 	local object = objects[id]
-	assert(object, string.format("Replication.getData: No replication object found for ID '%s'.", id))
+	assert(object, string.format("Replication:getData: No replication object found for ID '%s'.", id))
 
 	return deepCopy(object.Data)
 end
