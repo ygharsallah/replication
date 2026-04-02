@@ -13,11 +13,23 @@ export type Config = {
 	ID: ID,
 	Mutable: boolean,
 	Data: {},
+	Targets: TargetPlayers?,
 }
+
+export type PlayerConfig = {
+	ID: ID,
+	Mutable: boolean,
+	Data: {},
+}
+
+export type TargetPlayers = Player | { Player }
+
+type PlayerSet = { [Player]: true }
 
 type ReplicationObject = {
 	Mutable: boolean,
 	Data: {},
+	Targets: PlayerSet?,
 }
 
 export type Connection = {
@@ -109,7 +121,75 @@ local function ensureRemote()
 		remoteEvent = ReplicatedStorage:WaitForChild(REMOTE_NAME) :: RemoteEvent
 	end
 
-	return remoteEvent :: RemoteEvent
+	local event = remoteEvent
+	assert(event ~= nil, "Replication: failed to initialize remote event.")
+	return event
+end
+
+local function toPlayerSet(targets: TargetPlayers?): PlayerSet?
+	if targets == nil then
+		return nil
+	end
+
+	local result: PlayerSet = {}
+
+	if typeof(targets) == "Instance" then
+		assert(targets:IsA("Player"), "Replication: Targets must be a Player or an array of Players.")
+		result[targets] = true
+		return result
+	end
+
+	assert(type(targets) == "table", "Replication: Targets must be a Player or an array of Players.")
+	for _, player in ipairs(targets :: { Player }) do
+		assert(
+			typeof(player) == "Instance" and player:IsA("Player"),
+			"Replication: Every Targets entry must be a Player."
+		)
+		result[player] = true
+	end
+
+	return result
+end
+
+local function shouldReplicateToPlayer(object: ReplicationObject, player: Player): boolean
+	local targets = object.Targets
+	if not targets then
+		return true
+	end
+
+	return targets[player] == true
+end
+
+local function fireInitToTargets(id: string, object: ReplicationObject)
+	local event = ensureRemote()
+	local targets = object.Targets
+
+	if not targets then
+		event:FireAllClients("init", id, object.Data, object.Mutable)
+		return
+	end
+
+	for player in pairs(targets) do
+		if player.Parent == Players then
+			event:FireClient(player, "init", id, object.Data, object.Mutable)
+		end
+	end
+end
+
+local function fireSetToTargets(id: string, object: ReplicationObject, path: string, value: any)
+	local event = ensureRemote()
+	local targets = object.Targets
+
+	if not targets then
+		event:FireAllClients("set", id, path, value)
+		return
+	end
+
+	for player in pairs(targets) do
+		if player.Parent == Players then
+			event:FireClient(player, "set", id, path, value)
+		end
+	end
 end
 
 local function fireListeners(id: string, path: string, newValue: any, oldValue: any)
@@ -207,7 +287,9 @@ else
 	local event = ensureRemote()
 	Players.PlayerAdded:Connect(function(player: Player)
 		for id, object in pairs(objects) do
-			event:FireClient(player, "init", id, object.Data, object.Mutable)
+			if shouldReplicateToPlayer(object, player) then
+				event:FireClient(player, "init", id, object.Data, object.Mutable)
+			end
 		end
 	end)
 end
@@ -234,12 +316,26 @@ function Replication.New(config: Config)
 	local object: ReplicationObject = {
 		Mutable = config.Mutable == true,
 		Data = config.Data,
+		Targets = toPlayerSet(config.Targets),
 	}
 
 	objects[config.ID] = object
-	ensureRemote():FireAllClients("init", config.ID, object.Data, object.Mutable)
+	fireInitToTargets(config.ID, object)
 
 	return object
+end
+
+function Replication.NewForPlayer(player: Player, config: PlayerConfig)
+	assert(RunService:IsServer(), "Replication.NewForPlayer can only be called on the server.")
+	assert(typeof(player) == "Instance" and player:IsA("Player"), "Replication.NewForPlayer requires a Player.")
+	assert(config, "Replication.NewForPlayer: config is required.")
+
+	return Replication.New({
+		ID = config.ID,
+		Mutable = config.Mutable,
+		Data = config.Data,
+		Targets = player,
+	})
 end
 
 function Replication:Set(id: string, path: string, value: any)
@@ -253,7 +349,7 @@ function Replication:Set(id: string, path: string, value: any)
 
 	local newValue, oldValue = setValueAtPath(object.Data, path, value)
 	fireListeners(id, path, newValue, oldValue)
-	ensureRemote():FireAllClients("set", id, path, newValue)
+	fireSetToTargets(id, object, path, newValue)
 end
 
 function Replication:getData(id: string)
@@ -276,6 +372,14 @@ function Replication:onChanged(id: string, path: string, callback: (any, any?) -
 	table.insert(listeners[id][path], connection)
 
 	return connection
+end
+
+function Replication.GetData(id: string)
+	return Replication:getData(id)
+end
+
+function Replication.OnChanged(id: string, path: string, callback: (any, any?) -> ())
+	return Replication:onChanged(id, path, callback)
 end
 
 return Replication

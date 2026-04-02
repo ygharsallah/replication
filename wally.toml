@@ -2,7 +2,7 @@
 name = "ygharsallah/replication"
 description = "Lightweight path-based state replication for Roblox with change listeners"
 license = "MIT"
-version = "0.0.4"
+version = "1.0.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 repository = "https://github.com/ygharsallah/replication"
