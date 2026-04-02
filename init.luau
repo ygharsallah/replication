@@ -10,7 +10,7 @@ local HTTPService = game:GetService("HttpService")
 
 -- // Types
 export type Config = {
-	ID: string,
+	ID: ID,
 	Mutable: boolean,
 	Data: {},
 }
@@ -24,13 +24,15 @@ export type Connection = {
 	disconnect: (Connection) -> (),
 }
 
+export type ID = string
+
 -- // Constants
 local REMOTE_NAME = "ReplicationEvent"
 
 -- // Data
-local ids: { [string]: string } = {}
-local objects: { [string]: ReplicationObject } = {}
-local listeners: { [string]: { [string]: { Connection } } } = {}
+local ids: { [ID]: ID } = {}
+local objects: { [ID]: ReplicationObject } = {}
+local listeners: { [ID]: { [string]: { Connection } } } = {}
 local remoteEvent: RemoteEvent? = nil
 
 -- // Helpers

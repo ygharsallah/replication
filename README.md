@@ -1,34 +1,57 @@
+# Replication
+
+Simple server-authored state replication with path-based updates and client listeners.
+
+## Installation
+
+Add the package to your `wally.toml`:
+
+```toml
+[dependencies]
+Replication = "ygharsallah/replication@VERSION"
+```
+
+Then require it from your project:
+
+```lua
+local Replication = require(game.ReplicatedStorage.Packages.Replication)
+```
+
 ## API
 
-### `Replication.ID(name: string) -> ID`
+## `Replication.ID(name: string) -> ID`
+
 Creates a unique identifier used to reference a replication object. The same name on server and client resolves to the same object.
 
 ---
 
-### `Replication.New(config: { ID: string, Mutable: boolean, Data: table }) -> void`
-Creates a new replication object on the server and replicates it to all clients.
+## `Replication.New(config: { ID: ID, Mutable: boolean, Data: table }) -> { Mutable: boolean, Data: table }`
+
+*(Server-only)* Creates a new replication object and replicates it to all clients.
 
 | Field | Type | Description |
 |---|---|---|
-| `ID` | `string` | The identifier returned by `Replication.ID()` |
+| `ID` | `ID` | The identifier returned by `Replication.ID()` |
 | `Mutable` | `boolean` | Whether `Replication:Set()` can be called on this object |
-| `Data` | `table` | The initial data to replicate. The passed table reference is used directly |
+| `Data` | `table` | Initial data to replicate. The passed table reference is stored directly |
 
 ---
 
-### `Replication:Set(ID: string, path: string, value: any) -> void`
-*(Server-only)* Updates a value inside the replication object at the provided dot-notation `path` (e.g. `"Money"`, `"Stats.XP"`) and replicates the change to all clients. Requires `Mutable = true`.
+## `Replication:Set(ID: string, path: string, value: any) -> void`
+
+*(Server-only)* Updates a value at dot-notation `path` (e.g. `"Money"`, `"Stats.XP"`, `"Items.1"`) and replicates the change to all clients. Requires `Mutable = true`.
 
 ---
 
+## `Replication:getData(ID: string) -> table`
 
-### `Replication.getData(ID: string) -> table`
-Returns a snapshot of the current replicated data for the given ID.
+Returns a deep-copied snapshot of the current replicated data for the given ID.
 
 ---
 
-### `Replication:onChanged(ID: string, path: string, callback: (new_value: any, old_value: any?) -> void) -> Connection`
-Registers a listener that fires whenever the value at `path` changes. Supports dot-notation for nested tables (e.g. `"Stats.XP"`).
+## `Replication:onChanged(ID: string, path: string, callback: (new_value: any, old_value: any?) -> void) -> Connection`
+
+Registers a listener that fires whenever that exact `path` is updated via `Replication:Set()`. Supports dot-notation for nested tables (e.g. `"Stats.XP"`).
 
 **Callback parameters:**
 
@@ -37,20 +60,28 @@ Registers a listener that fires whenever the value at `path` changes. Supports d
 | `new_value` | `any` | The new value after the change |
 | `old_value` | `any?` | The previous value, nil if this is the first update |
 
+Both callback values are deep-copied snapshots.
+
 Returns a `Connection` object.
 
 ---
 
-### `Connection:disconnect() -> void`
+## `Connection:disconnect() -> void`
+
 Unregisters the listener returned by `Replication:onChanged()`.
 
+## Behavior Notes
+
+- `Replication.New()` and `Replication:Set()` are server-only.
+- Mutating the original table passed to `Replication.New()` does not replicate by itself; call `Replication:Set()` to replicate and trigger listeners.
+- `Replication:onChanged()` listeners are keyed by exact path. Updating `"Stats.XP"` does not fire a listener registered on `"Stats"`.
 
 ## Basic example
-...
 
 ### Server-side
+
 ``` lua
-local Replication = require(game.ReplicatedStorage.Replication)
+local Replication = require(game.ReplicatedStorage.Packages.Replication)
 
 local ID = Replication.ID("GlobalData")
 
@@ -92,12 +123,12 @@ Replication:Set(ID, "Invincible", true)
 ### Client-side
 
 ``` lua
-local Replication = require(game.ReplicatedStorage.Replication)
+local Replication = require(game.ReplicatedStorage.Packages.Replication)
 
 local ID = Replication.ID("GlobalData")
 
 -- Fetch the current snapshot of the replicated data
-local remoteData = Replication.getData(ID)
+local remoteData = Replication:getData(ID)
 local Money = remoteData.Money
 local Stats = remoteData.Stats
 local Items = remoteData.Items
